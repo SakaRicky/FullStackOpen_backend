@@ -1,37 +1,21 @@
 const mongoose = require('mongoose')
 
-if (process.argv.length < 3) {
-  console.log('Please provide the password as an argument: node mongo.js <password>')
-  process.exit(1)
-}
 
-const password = process.argv[2]
+const url = process.env.MONGODB_URI
 
-const url =
-  `mongodb+srv://rickysaka:${password}@cluster0.u3l97.mongodb.net/phonebook-app?retryWrites=true&w=majority`
+console.log('url is: ', url);
 
 mongoose.connect(url, { useNewUrlParser: true, useUnifiedTopology: true, useFindAndModify: false, useCreateIndex: true })
+.then(result => {
+  console.log("Conected to MongoDB");
+})
+.catch(error => {
+  console.log("error: ", error.message);
+})
 
 const contactSchema = new mongoose.Schema({
   name: String,
-  number: Date,
+  number: Number,
 })
 
-const Contact = mongoose.model('Contact', contactSchema)
-
-const contact = new Contact({
-  name: 'Nguiemou Lucienne',
-  number: +24112345678,
-})
-
-// Note.find({}).then(result => {
-//     result.forEach(note => {
-//       console.log(note)
-//     })
-//     mongoose.connection.close()
-//   })
-
-contact.save().then(result => {
-  console.log('note saved! as:', result)
-  mongoose.connection.close()
-})
+module.exports = mongoose.model('Contact', contactSchema)

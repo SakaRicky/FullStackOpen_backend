@@ -5,6 +5,27 @@ POST http://localhost:3001/api/persons/ HTTP/1.1
 content-type: application/json
 
 {
-    "name": "Ricky",
-    "number": "12345678"
+    "name": "Ssaka Ricky",
+    "number": "112345678"
+}
+
+###
+DELETE  http://localhost:3001/api/persons/6014732b646b7c21d837ce27 HTTP/1.1
+
+###
+POST http://localhost:3001/api/persons/ HTTP/1.1
+content-type: application/json
+
+{
+    "name": "CAC",
+    "number": "0"
+}
+
+###
+PUT http://localhost:3001/api/persons/6016c81c3656de1838750514 HTTP/1.1
+content-type: application/json
+
+{
+    "name": "Mama",
+    "number": "+237675092222"
 }

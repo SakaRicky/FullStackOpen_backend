@@ -1,25 +1,9 @@
+require('dotenv').config()
 const express = require('express');
 const app = express();
 let morgan = require('morgan');
 let cors = require('cors');
-
-let persons = [
-    {
-        "id": 1,
-        "name": "Saka Ricky",
-        "number": 698425147
-    },
-    {
-        "id": 2,
-        "name": "Saka Rheine",
-        "number": 673572219
-    },
-    {
-        "id": 3,
-        "name": "Guenang Paulin",
-        "number": 697379529
-    }
-]
+const Contact = require('./models/phonebook');
 
 app.use(express.json());
 app.use(cors());
@@ -45,68 +29,88 @@ app.get('/', (request, response) => {
 });
 
 app.get('/api/persons', (request, response) => {
-    response.json(persons)
+    Contact.find({}).then(persons => {
+        response.json(persons);
+    })
 });
 
 app.get('/info', (request, response) => {
-    const number_Of_persons = persons.length;
-    const date = new Date();
-    response.send(`<div>Phonebook has info for ${number_Of_persons} people</div><br><div>${date}</div>`)
+    Contact.count({}).then(persons_number => {
+        const date = new Date();
+        return response.send(`<div>Phonebook has info for ${persons_number} people</div><br><div>${date}</div>`)
+    })
+    
 })
 
-app.get('/api/persons/:id', (request, response) => {
-    console.log(request.params.id);
-    const id = Number(request.params.id)
-    const person = persons.find(person => person.id === id);
-    response.json(person)
+app.get('/api/persons/:id', (request, response, next) => {
+    Contact.findById(request.params.id)
+           .then(person => response.json(person))
+           .catch(error => next(error))
 });
 
-const generateID = () => {
-    const maxID = persons.length !== 0 ? Math.max(...persons.map(person => person.id)) : 0
-    return maxID;
-}
 
-app.post('/api/persons/', (request, response) => {
+app.post('/api/persons/', (request, response, next) => {
     const body = request.body
 
-    if (!body.name) {
-        return response.status(400).json({
-            error: "Name missing"
-        })
-    }
+    const person = new Contact({
+        "name": body.name,
+        "number": body.number,
+    })
 
-    if (!body.number) {
-        return response.status(400).json({
-            error: "Number missing"
-        })
-    }
+    person.save()
+          .then(savedPerson => response.json(savedPerson))
+          .catch(error => next(error))
+    
+});
 
-    if (persons.map(person => person.name).includes(body.name)) {
-        return response.status(400).json({
-            error: "Name must be unique"
-        })
-    }
+app.put('/api/persons/:id', (request, response, next) => {
+    const body = request.body
 
-    person = {
-        "id": generateID(),
+    const person = {
         "name": body.name,
         "number": body.number,
     }
 
-    return response.json(person)
+    Contact.findByIdAndUpdate(request.params.id, person, {new: true, runValidators: true, context: 'query'})
+           .then(updatedPerson => response.json(updatedPerson))
+           .catch(error => {
+               next(error)
+           })
 });
 
-app.delete('/api/persons/:id', (request, response) => {
-    const id = Number(request.params.id);
-    const persons_remaining = persons.filter(person => person.id !== id);
-    response.status(204).end();
+app.delete('/api/persons/:id', (request, response, next) => {
+
+    Contact.findByIdAndRemove(request.params.id)
+           .then(result =>  {
+               console.log("removed ", result.name);
+               return response.json(result)
+           })
+           .catch(error => {
+               console.log(error);
+               next(error)
+           })
 })
 
-const unknownEndpoint = (request, response) => {
+const unknownEndpoint = (request, response, next) => {
     response.status(404).send({ error: 'unknown endpoint' })
-  }
+}
   
-  app.use(unknownEndpoint)
+app.use(unknownEndpoint)
+
+const errorHandler = (error, request, response, next) => {
+    
+    if (error.name === 'CastError') {
+        return response.status(400).send({ error: 'invalid id' })
+    } else if (error.name === "ValidationError") {
+        console.log(error.message);
+        return response.status(400).send({message: error.message})
+    }
+    
+
+    next(error)
+}
+
+app.use(errorHandler)
 
 const PORT = process.env.PORT || 3001
 ;
